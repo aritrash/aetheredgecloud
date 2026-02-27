@@ -1,0 +1,2 @@
+Aether EdgeCloud is an ARM64 EL2 micro-hypervisor designed to power distributed edge compute fabrics.
+It provides hardware-level isolation, workload orchestration primitives, and cluster coordination, while delegating execution to Linux guest VMs.
