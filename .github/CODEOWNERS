@@ -1,0 +1,6 @@
+# Automate review assignments
+* @aritrash
+
+# Specific owners for sensitive areas
+/src/arch/ @aritrash
+/src/hypervisor/ @aritrash
