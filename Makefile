@@ -12,6 +12,8 @@ run: img
 		-serial stdio \
 		-display none \
 		-machine virtualization=on \
+		-netdev user,id=net0 \
+		-device virtio-net-device,netdev=net0 \
 		-kernel edgecloud.img
 
 clean:

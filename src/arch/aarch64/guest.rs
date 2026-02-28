@@ -7,7 +7,7 @@ guest_entry:
     mov x0, #'G'
     bl guest_uart_putc
 
-    svc #0
+    bl el1_rust_main
 
 1:
     wfe
@@ -25,7 +25,6 @@ send:
 "#
 );
 
-#[allow(dead_code)]
 extern "C" {
     pub fn guest_entry();
 }

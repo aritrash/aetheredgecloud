@@ -4,6 +4,7 @@
 mod arch;
 mod drivers;
 mod hypervisor;
+mod el1;
 
 use core::panic::PanicInfo;
 

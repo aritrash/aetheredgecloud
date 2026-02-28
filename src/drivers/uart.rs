@@ -24,3 +24,14 @@ pub fn puts(s: &str) {
         putc(b);
     }
 }
+
+pub fn putc_hex64(val: u64) {
+    for i in (0..16).rev() {
+        let nibble = ((val >> (i * 4)) & 0xF) as u8;
+        let c = match nibble {
+            0..=9 => b'0' + nibble,
+            _ => b'A' + (nibble - 10),
+        };
+        putc(c);
+    }
+}

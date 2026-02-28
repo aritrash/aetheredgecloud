@@ -72,23 +72,19 @@ b handle_serr
 
 handle_sync:
     bl rust_el2_exception
-1:  wfe
-    b 1b
+    eret
 
 handle_irq:
     bl rust_el2_exception
-1:  wfe
-    b 1b
+    eret
 
 handle_fiq:
     bl rust_el2_exception
-1:  wfe
-    b 1b
+    eret
 
 handle_serr:
     bl rust_el2_exception
-1:  wfe
-    b 1b
+    eret
 "#
 );
 
@@ -104,23 +100,33 @@ pub extern "C" fn rust_el2_exception() {
         core::arch::asm!("mrs {}, far_el2", out(reg) far);
     }
 
+    let ec = (esr >> 26) & 0x3F;
+
+    if ec == 0x16 {
+        crate::drivers::uart::puts("[EL2] SVC trapped from EL1\n");
+
+        // Advance ELR_EL2 past SVC instruction
+        let new_elr = elr + 4;
+
+        unsafe {
+            core::arch::asm!("msr elr_el2, {}", in(reg) new_elr);
+        }
+
+        return;
+    }
+
     crate::drivers::uart::puts("\n=== EL2 EXCEPTION ===\n");
-    crate::drivers::uart::puts("ESR_EL2 = ");
-    print_hex(esr);
-    crate::drivers::uart::puts("\nELR_EL2 = ");
-    print_hex(elr);
-    crate::drivers::uart::puts("\nFAR_EL2 = ");
-    print_hex(far);
+
+    crate::drivers::uart::puts("ESR_EL2 = 0x");
+    crate::drivers::uart::putc_hex64(esr);
+
+    crate::drivers::uart::puts("\nELR_EL2 = 0x");
+    crate::drivers::uart::putc_hex64(elr);
+
+    crate::drivers::uart::puts("\nFAR_EL2 = 0x");
+    crate::drivers::uart::putc_hex64(far);
+
     crate::drivers::uart::puts("\n");
 
     loop {}
-}
-
-fn print_hex(val: u64) {
-    const HEX: &[u8; 16] = b"0123456789ABCDEF";
-    crate::drivers::uart::puts("0x");
-    for i in (0..16).rev() {
-        let nibble = ((val >> (i * 4)) & 0xF) as usize;
-        crate::drivers::uart::putc(HEX[nibble]);
-    }
 }
