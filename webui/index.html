@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Aether EdgeCloud OS</title>
+</head>
+<body>
+    <div class="desktop">
+        <div class="top-bar">
+            <div class="left"><b>Aether</b> Finder File Edit View</div>
+            <div class="right" id="clock">07:47 AM</div>
+        </div>
+        
+        <div class="widget">
+            <div class="widget-header">Performance <span class="more">...</span></div>
+            <div class="stat">CPU Usage <span class="val">32%</span></div>
+            <div class="progress"><div class="fill" style="width: 32%"></div></div>
+            <div class="stat">Memory <span class="val">5.2 / 16 GB</span></div>
+            <div class="progress"><div class="fill purple" style="width: 40%"></div></div>
+        </div>
+
+        <div class="window" id="klogs-win">
+            <div class="win-header">
+                <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+                <span class="title">KLogs - Kernel Output</span>
+            </div>
+            <div class="terminal" id="log-output">
+                [CHECK] UART: Initialized<br>
+                [INFO] Current EL: 1<br>
+                [OK] Network Stack Initialized (IP: 10.0.2.15)<br>
+                > Aether OS System Ready...
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

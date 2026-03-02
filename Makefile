@@ -10,10 +10,11 @@ run: img
 		-cpu max \
 		-m 1G \
 		-serial stdio \
-		-display none \
+		-display sdl \
 		-machine virtualization=on \
-		-netdev user,id=net0 \
+		-netdev user,id=net0,hostfwd=tcp::8080-:80 \
 		-device virtio-net-device,netdev=net0 \
+		-device virtio-gpu-device \
 		-kernel edgecloud.img
 
 clean:

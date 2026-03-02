@@ -1,0 +1,10 @@
+body { margin: 0; background: #0b0e14; color: white; font-family: sans-serif; overflow: hidden; }
+.desktop { width: 100vw; height: 100vh; background: radial-gradient(circle at top right, #1a1f2e, #0b0e14); }
+.top-bar { height: 30px; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 12px; }
+.widget { position: absolute; top: 50px; right: 20px; width: 250px; background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border-radius: 15px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); }
+.progress { background: rgba(255,255,255,0.1); height: 6px; border-radius: 3px; margin: 8px 0 15px; }
+.fill { height: 100%; background: #007bff; border-radius: 3px; }
+.purple { background: #a371f7; }
+.window { position: absolute; top: 100px; left: 50px; width: 500px; height: 300px; background: #161b22; border-radius: 10px; border: 1px solid #30363d; display: flex; flex-direction: column; }
+.win-header { background: #0d1117; padding: 10px; display: flex; align-items: center; border-bottom: 1px solid #30363d; }
+.terminal { flex: 1; padding: 15px; font-family: monospace; color: #8b949e; overflow-y: auto; font-size: 13px; }
