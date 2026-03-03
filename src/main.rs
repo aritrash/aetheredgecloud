@@ -58,35 +58,42 @@ pub extern "C" fn kmain() {
 
     uart::puts("[CHECK] Initializing PCI subsystem...\n");
 
-    let mut transport_opt = None;
-
     unsafe {
         let host = QemuVirtPci;
 
-        if let Some(info) = enumerate(&host) {
-            uart::puts("[MAIN] VirtIO PCI device discovered\n");
+        match enumerate(&host) {
 
-            let mut transport =
-                VirtioPciTransport::new(
-                    info.common_cfg,
-                    info.notify_base,
-                );
+            Some(info) => {
+                uart::puts("[MAIN] VirtIO PCI device discovered\n");
 
-            if transport.handshake() {
-                uart::puts("[MAIN] Handshake successful\n");
+                // Build transport
+                let transport =
+                    VirtioPciTransport::new(
+                        info.common_cfg,
+                        info.notify_base,
+                        info.notify_off_multiplier,
+                    );
 
-                if transport.setup_queue(0, 128).is_some() {
-                    uart::puts("[MAIN] Queue setup complete\n");
-                } else {
-                    uart::puts("[MAIN] Queue setup failed\n");
+                // Create GPU device
+                match crate::drivers::virtio_gpu::device::VirtioGpu::new(transport) {
+
+                    Some(mut gpu) => {
+                        uart::puts("[MAIN] GPU driver initialized\n");
+
+                        gpu.init_display();
+
+                        uart::puts("[MAIN] Display initialization complete\n");
+                    }
+
+                    None => {
+                        uart::puts("[MAIN] GPU driver failed to initialize\n");
+                    }
                 }
-
-                transport_opt = Some(transport);
-            } else {
-                uart::puts("[MAIN] Handshake failed\n");
             }
-        } else {
-            uart::puts("[MAIN] No VirtIO PCI device found\n");
+
+            None => {
+                uart::puts("[MAIN] No VirtIO PCI device found\n");
+            }
         }
     }
 
