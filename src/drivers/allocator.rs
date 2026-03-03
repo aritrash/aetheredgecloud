@@ -1,7 +1,7 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 // 2MB for VirtQueues and Packet Buffers
-const ARENA_SIZE: usize = 2 * 1024 * 1024;
+const ARENA_SIZE: usize = 8 * 1024 * 1024;
 
 // FIXED: Added repr(align) to ensure the base of the arena is page-aligned.
 // Without this, 'aligned' offsets are calculated relative to an unknown base.

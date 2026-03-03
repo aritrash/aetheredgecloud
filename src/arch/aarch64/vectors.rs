@@ -134,25 +134,19 @@ pub extern "C" fn rust_sync_handler() {
 pub extern "C" fn rust_irq_handler() {
     let irq = crate::drivers::gic::acknowledge_irq();
 
-    // IRQ 30 is the standard AArch64 Virtual Timer
     if irq == 30 {
-        crate::drivers::uart::puts("\n[HEARTBEAT] Tick! Timer interrupt received.\n");
-        
-        // Reset the timer for the next 1 second
+        crate::drivers::uart::puts("\n[HEARTBEAT] Tick!\n");
+
         unsafe {
             let freq: u64;
             core::arch::asm!("mrs {}, cntfrq_el0", out(reg) freq);
             core::arch::asm!("msr cntv_tval_el0, {}", in(reg) freq);
         }
-    } else if irq >= 48 && irq <= 96 { // Likely VirtIO range
-        crate::drivers::uart::puts("\n[NET] Network Packet Received!\n");
-        unsafe { crate::drivers::virtio_net::handle_interrupt(); }
     } else if irq < 1023 {
         crate::drivers::uart::puts("\n[IRQ] External interrupt: ");
         crate::drivers::uart::putc_hex64(irq as u64);
         crate::drivers::uart::puts("\n");
     }
 
-    // Signal the GIC that we are done with this IRQ
     crate::drivers::gic::end_of_interrupt(irq);
 }

@@ -133,7 +133,7 @@ impl<'a> phy::TxToken for VirtioTxToken<'a> {
             atomic::fence(Ordering::SeqCst);
 
             // 6. Ring the Doorbell for Queue 1 (TX)
-            core::ptr::write_volatile((self.base + 0x050) as *mut u32, 1);
+            crate::drivers::virtio_mmio::notify_queue(self.base, 1);
 
             crate::drivers::uart::puts("[DEBUG] TX Packet pushed to VirtIO doorbell\n");
             

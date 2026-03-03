@@ -16,11 +16,20 @@ pub struct VirtqDesc {
     pub next: u16,
 }
 
-#[repr(C, align(2))]
+#[repr(C)]
 pub struct VirtqAvail {
     pub flags: u16,
     pub idx: u16,
-    pub ring: [u16; 128], // Size must match QueueNum
+    pub ring: [u16; 128],
+    pub used_event: u16,
+}
+
+#[repr(C)]
+pub struct VirtqUsed {
+    pub flags: u16,
+    pub idx: u16,
+    pub ring: [VirtqUsedElem; 128],
+    pub avail_event: u16,
 }
 
 #[repr(C, align(4))]
@@ -28,13 +37,6 @@ pub struct VirtqAvail {
 pub struct VirtqUsedElem {
     pub id: u32,
     pub len: u32,
-}
-
-#[repr(C, align(4))]
-pub struct VirtqUsed {
-    pub flags: u16,
-    pub idx: u16,
-    pub ring: [VirtqUsedElem; 128],
 }
 
 impl VirtQueue {

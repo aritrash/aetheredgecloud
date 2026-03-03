@@ -13,8 +13,8 @@ run: img
 		-display sdl \
 		-machine virtualization=on \
 		-netdev user,id=net0,hostfwd=tcp::8080-:80 \
-		-device virtio-net-device,netdev=net0 \
-		-device virtio-gpu-device \
+		-device virtio-net,netdev=net0 \
+		-device virtio-gpu \
 		-kernel edgecloud.img
 
 clean:
