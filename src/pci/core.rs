@@ -1,8 +1,10 @@
 use crate::drivers::uart;
 use crate::pci::host::PciHost;
-use core::ptr::{read_volatile, write_volatile};
 
-use crate::drivers::virtio_pci::VirtioPciCommonCfg;
+pub struct VirtioPciDeviceInfo {
+    pub common_cfg: usize,
+    pub notify_base: usize,
+}
 
 const PCI_STATUS_CAP_LIST: u16 = 1 << 4;
 const PCI_CAP_ID_VENDOR: u8 = 0x09;
@@ -17,7 +19,7 @@ fn align_up(value: u64, align: u64) -> u64 {
     (value + align - 1) & !(align - 1)
 }
 
-pub unsafe fn enumerate(host: &dyn PciHost) {
+pub unsafe fn enumerate(host: &dyn PciHost) -> Option<VirtioPciDeviceInfo> {
     uart::puts("[PCI] Enumerating bus 0...\n");
 
     for dev in 0u8..32 {
@@ -36,10 +38,11 @@ pub unsafe fn enumerate(host: &dyn PciHost) {
         uart::putc_hex64(device as u64);
         uart::puts("\n");
 
+        // Detect modern VirtIO GPU
         if vendor == 0x1AF4 && device == 0x1050 {
             uart::puts("[PCI] -> VirtIO GPU detected\n");
 
-            // ---------------- BAR PROBE ----------------
+            // ---------------- BAR SIZING ----------------
 
             let original_bar4 = host.read(0, dev, 0, PCI_BAR4_OFFSET);
             let original_bar5 = host.read(0, dev, 0, PCI_BAR5_OFFSET);
@@ -70,6 +73,7 @@ pub unsafe fn enumerate(host: &dyn PciHost) {
             uart::putc_hex64(assigned_base);
             uart::puts("\n");
 
+            // Program BAR4
             host.write(
                 0,
                 dev,
@@ -86,6 +90,7 @@ pub unsafe fn enumerate(host: &dyn PciHost) {
                 (assigned_base >> 32) as u32,
             );
 
+            // Enable memory decoding
             let command = host.read(0, dev, 0, PCI_COMMAND_OFFSET);
             host.write(0, dev, 0, PCI_COMMAND_OFFSET, command | 0x2);
 
@@ -113,7 +118,8 @@ pub unsafe fn enumerate(host: &dyn PciHost) {
             let cap_ptr_raw = host.read(0, dev, 0, 0x34);
             let mut cap_ptr = (cap_ptr_raw & 0xFF) as u8;
 
-            let mut common_cfg_addr: Option<u64> = None;
+            let mut common_cfg_addr: Option<usize> = None;
+            let mut notify_base: Option<usize> = None;
 
             while cap_ptr != 0 {
                 let cap_header = host.read(0, dev, 0, cap_ptr as u16);
@@ -131,89 +137,36 @@ pub unsafe fn enumerate(host: &dyn PciHost) {
                     let offset =
                         host.read(0, dev, 0, cap_ptr as u16 + 0x08);
 
-                    if cfg_type == 1 {
-                        common_cfg_addr =
-                            Some(bar_base + offset as u64);
+                    let addr = bar_base + offset as u64;
+
+                    match cfg_type {
+                        1 => {
+                            uart::puts("[PCI] Found common config\n");
+                            common_cfg_addr = Some(addr as usize);
+                        }
+                        2 => {
+                            uart::puts("[PCI] Found notify config\n");
+                            notify_base = Some(addr as usize);
+                        }
+                        _ => {}
                     }
                 }
 
                 cap_ptr = next_ptr;
             }
 
-            // ---------------- COMMON CONFIG INIT ----------------
+            if let (Some(common), Some(notify)) =
+                (common_cfg_addr, notify_base)
+            {
+                uart::puts("[PCI] Returning VirtIO PCI transport info\n");
 
-            if let Some(addr) = common_cfg_addr {
-                let common_cfg = addr as *mut VirtioPciCommonCfg;
-
-                // --------------------------------------------------
-                // 1. Reset device
-                // --------------------------------------------------
-                write_volatile(&mut (*common_cfg).device_status, 0);
-
-                // --------------------------------------------------
-                // 2. ACKNOWLEDGE
-                // --------------------------------------------------
-                write_volatile(&mut (*common_cfg).device_status, 1);
-
-                // --------------------------------------------------
-                // 3. DRIVER
-                // --------------------------------------------------
-                write_volatile(&mut (*common_cfg).device_status, 1 | 2);
-
-                // --------------------------------------------------
-                // 4. Read device features
-                // --------------------------------------------------
-                write_volatile(&mut (*common_cfg).device_feature_select, 0);
-                let device_features =
-                    read_volatile(&(*common_cfg).device_feature);
-
-                uart::puts("[VIRTIO] Device features: ");
-                uart::putc_hex64(device_features as u64);
-                uart::puts("\n");
-
-                // --------------------------------------------------
-                // 5. Negotiate features
-                //    Accept ONLY VIRTIO_F_VERSION_1 (bit 0)
-                // --------------------------------------------------
-                write_volatile(&mut (*common_cfg).driver_feature_select, 0);
-                write_volatile(&mut (*common_cfg).driver_feature, 1);
-
-                // --------------------------------------------------
-                // 6. Set FEATURES_OK
-                // --------------------------------------------------
-                let mut status =
-                    read_volatile(&(*common_cfg).device_status);
-
-                status |= 8; // FEATURES_OK
-                write_volatile(&mut (*common_cfg).device_status, status);
-
-                // Verify FEATURES_OK
-                let status_check =
-                    read_volatile(&(*common_cfg).device_status);
-
-                uart::puts("[VIRTIO] Status after FEATURES_OK: ");
-                uart::putc_hex64(status_check as u64);
-                uart::puts("\n");
-
-                // If device cleared FEATURES_OK, negotiation failed
-                if (status_check & 8) == 0 {
-                    uart::puts("[VIRTIO] ERROR: FEATURES_OK rejected\n");
-                    return;
-                }
-
-                // --------------------------------------------------
-                // 7. DRIVER_OK
-                // --------------------------------------------------
-                status |= 4; // DRIVER_OK
-                write_volatile(&mut (*common_cfg).device_status, status);
-
-                let final_status =
-                    read_volatile(&(*common_cfg).device_status);
-
-                uart::puts("[VIRTIO] Final device status: ");
-                uart::putc_hex64(final_status as u64);
-                uart::puts("\n");
+                return Some(VirtioPciDeviceInfo {
+                    common_cfg: common,
+                    notify_base: notify,
+                });
             }
         }
     }
+
+    None
 }

@@ -4,12 +4,14 @@
 mod arch;
 mod drivers;
 mod gfx;
-mod pci;   // <-- NEW
+mod pci;
 
 use drivers::uart;
 use core::arch::asm;
+
 use pci::host::qemu_virt::QemuVirtPci;
 use pci::core::enumerate;
+use drivers::virtio_pci::VirtioPciTransport;
 
 #[no_mangle]
 pub extern "C" fn kmain() {
@@ -56,9 +58,36 @@ pub extern "C" fn kmain() {
 
     uart::puts("[CHECK] Initializing PCI subsystem...\n");
 
+    let mut transport_opt = None;
+
     unsafe {
         let host = QemuVirtPci;
-        enumerate(&host);
+
+        if let Some(info) = enumerate(&host) {
+            uart::puts("[MAIN] VirtIO PCI device discovered\n");
+
+            let mut transport =
+                VirtioPciTransport::new(
+                    info.common_cfg,
+                    info.notify_base,
+                );
+
+            if transport.handshake() {
+                uart::puts("[MAIN] Handshake successful\n");
+
+                if transport.setup_queue(0, 128).is_some() {
+                    uart::puts("[MAIN] Queue setup complete\n");
+                } else {
+                    uart::puts("[MAIN] Queue setup failed\n");
+                }
+
+                transport_opt = Some(transport);
+            } else {
+                uart::puts("[MAIN] Handshake failed\n");
+            }
+        } else {
+            uart::puts("[MAIN] No VirtIO PCI device found\n");
+        }
     }
 
     uart::puts("[OK] PCI Enumeration Complete.\n");
